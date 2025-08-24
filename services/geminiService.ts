@@ -21,7 +21,7 @@ export const extractDataFromFile = async (fileBase64: string, fileType: string):
 
     Follow these rules precisely for each transaction group you identify:
 
-    1.  **Identify Key Information**: From each transaction group, extract the TPE number, the transaction date, the remittance number (if available), card info (if available), and the amounts for each of the four components.
+    1.  **Identify Key Information**: From each transaction group, extract the TPE number (it is often labeled as "POINT DE VENTE N."), the transaction date, the remittance number (if available), card info (if available), and the amounts for each of the four components.
 
     2.  **Date Format Rule**: The date for ALL generated rows MUST be strictly in DD/MM/YYYY format.
 
