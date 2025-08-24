@@ -23,12 +23,14 @@ export const extractDataFromFile = async (fileBase64: string, fileType: string):
 
     1.  **Identify Key Information**: From each transaction group, extract the TPE number, the transaction date, the remittance number (if available), card info (if available), and the amounts for each of the four components.
 
-    2.  **Construct the 'Libellé'**: The 'Libellé' for each of the four rows must be a combination of the TPE number, remittance number, card info (like last 4 digits), and the specific description (e.g., "TOTAL REMISE").
+    2.  **Date Format Rule**: The date for ALL generated rows MUST be strictly in DD/MM/YYYY format.
 
-    3.  **Generate Four Rows with Specific Accounting Logic**:
+    3.  **Construct the 'Libellé'**: The 'Libellé' for each of the four rows must be a combination of the TPE number, remittance number, card info (like last 4 digits), and the specific description (e.g., "TOTAL REMISE").
+
+    4.  **Generate Four Rows with Specific Accounting Logic**:
 
         a. **For "TOTAL REMISE"**:
-           - **DATE**: The transaction date.
+           - **DATE**: The transaction date, formatted as DD/MM/YYYY.
            - **COMPTE GENERAL**: "34210000".
            - **COMPTE TIER**: "CMI" followed by the last 5 digits of the TPE number.
            - **LIBELLE**: The constructed description.
@@ -36,15 +38,15 @@ export const extractDataFromFile = async (fileBase64: string, fileType: string):
            - **CREDIT**: The "TOTAL REMISE" amount, formatted as a string with a comma decimal separator.
 
         b. **For "COMMISSIONS HT"**:
-           - **DATE**: The transaction date.
-           - **COMPTE GENERAL**: "61740000".
+           - **DATE**: The transaction date, formatted as DD/MM/YYYY.
+           - **COMPTE GENERAL**: "61474000".
            - **COMPTE TIER**: An empty string "".
            - **LIBELLE**: The constructed description.
            - **DEBIT**: The "COMMISSIONS HT" amount, formatted as a string with a comma decimal separator.
            - **CREDIT**: An empty string "".
 
         c. **For "TVA SUR COMMISSIONS"**:
-           - **DATE**: The transaction date.
+           - **DATE**: The transaction date, formatted as DD/MM/YYYY.
            - **COMPTE GENERAL**: "34552010".
            - **COMPTE TIER**: An empty string "".
            - **LIBELLE**: The constructed description.
@@ -52,14 +54,14 @@ export const extractDataFromFile = async (fileBase64: string, fileType: string):
            - **CREDIT**: An empty string "".
 
         d. **For "SOLDE NET REMISE"**:
-           - **DATE**: The transaction date.
+           - **DATE**: The transaction date, formatted as DD/MM/YYYY.
            - **COMPTE GENERAL**: "34210000".
            - **COMPTE TIER**: "CMI" followed by the last 5 digits of the TPE number.
            - **LIBELLE**: The constructed description.
            - **DEBIT**: The "SOLDE NET REMISE" amount, formatted as a string with a comma decimal separator.
            - **CREDIT**: An empty string "".
 
-    4.  **Final Output**: Return a single JSON array containing all the generated objects. Do not include any explanatory text, markdown, or summaries. The output must be only the JSON array.
+    5.  **Final Output**: Return a single JSON array containing all the generated objects. Do not include any explanatory text, markdown, or summaries. The output must be only the JSON array.
   `;
 
   try {

@@ -1,21 +1,36 @@
-import React, { useState, ChangeEvent, useRef } from 'react';
+import React, { useState, ChangeEvent, useRef, DragEvent } from 'react';
 import * as XLSX from 'xlsx';
 import { extractDataFromFile } from './services/geminiService';
 import type { StatementRow } from './types';
 import DataTable from './components/DataTable';
 import Spinner from './components/Spinner';
 
+// New component for the upload icon
+const UploadIcon = () => (
+  <svg className="w-16 h-16 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+  </svg>
+);
+
+
 export default function App() {
   const [data, setData] = useState<StatementRow[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const processFile = (file: File) => {
     if (!file) {
+      return;
+    }
+
+    // Check file type
+    const acceptedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+    if (!acceptedTypes.includes(file.type)) {
+      setError(`Unsupported file type: ${file.type}. Please upload a PDF or image file.`);
       return;
     }
 
@@ -56,6 +71,37 @@ export default function App() {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  };
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      processFile(file);
+    }
+  };
+
+  const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation(); // Necessary to allow dropping
+  };
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processFile(file);
     }
   };
   
@@ -101,55 +147,98 @@ export default function App() {
     XLSX.writeFile(workbook, 'cmi_statement_data.xlsx');
   };
 
-  const StatusDisplay: React.FC = () => {
+  const resetState = () => {
+    setData(null);
+    setError(null);
+    setFileName(null);
+    setLoading(false);
+    if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+    }
+  };
+
+  const renderContent = () => {
     if (loading) {
       return (
         <div className="flex flex-col items-center justify-center space-y-4 text-slate-600 p-8 border-2 border-dashed border-slate-300 rounded-lg bg-slate-50">
           <Spinner />
-          <p className="font-medium text-lg">Analyzing your document...</p>
+          <p className="font-medium text-lg">Analyzing: {fileName}</p>
           <p className="text-sm text-slate-500">This may take a moment. Please wait.</p>
         </div>
       );
     }
+
     if (error) {
       return (
-        <div className="bg-red-50 border-l-4 border-red-400 text-red-800 p-4 rounded-lg" role="alert">
-          <p className="font-bold">An Error Occurred</p>
-          <p>{error}</p>
+        <div className="space-y-4">
+          <div className="bg-red-50 border-l-4 border-red-400 text-red-800 p-4 rounded-lg" role="alert">
+            <p className="font-bold">An Error Occurred</p>
+            <p>{error}</p>
+          </div>
+          <div className="text-center">
+            <button
+                onClick={resetState}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 transform hover:scale-105 shadow-md"
+            >
+                Try Again
+            </button>
+          </div>
         </div>
       );
     }
-    if (!data && !loading) {
+
+    if (data) {
       return (
-        <div className="text-center p-8 border-2 border-dashed border-slate-300 rounded-lg">
-          <p className="text-slate-500 font-medium">Upload a statement to begin data extraction.</p>
+         <div className="space-y-6 animate-fade-in">
+            <div className="p-4 bg-green-50 rounded-lg border border-green-200 text-green-800">
+                <p>
+                    <span className="font-bold">Success!</span> Extracted {data.length} rows from <span className="font-medium">{fileName}</span>.
+                </p>
+            </div>
+            <DataTable data={data} />
+            <div className="flex flex-col sm:flex-row justify-end items-center gap-4">
+                <button
+                    onClick={resetState}
+                    className="w-full sm:w-auto text-slate-600 hover:text-slate-800 font-semibold py-2 px-4 rounded-lg transition duration-300"
+                >
+                    Process Another File
+                </button>
+                <button
+                  onClick={handleDownloadExcel}
+                  className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 transform hover:scale-105 shadow-md flex items-center justify-center gap-2"
+                >
+                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                  Download as Excel
+                </button>
+            </div>
         </div>
       );
     }
-    return null;
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-50 p-4 sm:p-8 flex flex-col items-center font-sans text-slate-800">
-      <main className="bg-white rounded-xl shadow-lg p-6 sm:p-8 w-full max-w-5xl">
-        <header className="text-center border-b border-slate-200 pb-6 mb-6">
-          <h1 className="text-3xl sm:text-4xl font-bold text-slate-800 mb-2">AI CMI Statement Extractor</h1>
-          <p className="text-slate-600 max-w-2xl mx-auto">
-            Upload your CMI statement (PDF or image) to automatically convert transactions into an accounting journal format, ready for Excel.
-          </p>
-        </header>
-
-        <section className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-8">
-          <label
-            htmlFor="file-upload"
-            className={`w-full sm:w-auto cursor-pointer font-semibold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-md flex items-center justify-center gap-2 ${loading ? 'bg-slate-400 text-slate-100 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
-            </svg>
-            {loading ? 'Processing...' : 'Upload Statement'}
-          </label>
-          <input
+    
+    // Initial state: Dropzone
+    return (
+       <div 
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        className={`relative flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg transition-colors duration-300 ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-slate-300 bg-slate-50'}`}
+      >
+        <div className="text-center space-y-2">
+            <UploadIcon />
+            <p className="font-semibold text-slate-700">Drag & drop your CMI statement here</p>
+            <p className="text-sm text-slate-500">PDF, PNG, JPG files are supported</p>
+            <p className="text-sm text-slate-400 py-2">or</p>
+        </div>
+        <button
+            onClick={() => fileInputRef.current?.click()}
+            className="mt-2 font-semibold py-2 px-5 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-md bg-blue-600 hover:bg-blue-700 text-white"
+        >
+            Select File
+        </button>
+        <input
             id="file-upload"
             ref={fileInputRef}
             type="file"
@@ -157,31 +246,28 @@ export default function App() {
             onChange={handleFileChange}
             accept=".pdf,.png,.jpg,.jpeg"
             disabled={loading}
-          />
-          {fileName && !loading && !error && <p className="text-sm text-slate-500 font-medium">Selected: {fileName}</p>}
-        </section>
+        />
+       </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-100 p-4 sm:p-8 flex flex-col items-center font-sans text-slate-800">
+      <main className="bg-white rounded-xl shadow-lg p-6 sm:p-8 w-full max-w-5xl">
+        <header className="text-center border-b border-slate-200 pb-6 mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold text-slate-800 mb-2">AI CMI Statement Extractor</h1>
+          <p className="text-slate-600 max-w-2xl mx-auto">
+            Upload your CMI statement (PDF or image) to automatically convert transactions into an accounting journal format, ready for Excel.
+          </p>
+        </header>
 
         <section className="space-y-6">
-          <StatusDisplay />
-          
-          {data && (
-            <div className="space-y-6 animate-fade-in">
-              <DataTable data={data} />
-              <div className="flex justify-end">
-                <button
-                  onClick={handleDownloadExcel}
-                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 transform hover:scale-105 shadow-md flex items-center gap-2"
-                >
-                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                  Download as Excel
-                </button>
-              </div>
-            </div>
-          )}
+          {renderContent()}
         </section>
       </main>
+      <footer className="text-center py-6 text-slate-500 text-sm">
+        <p>Powered by MAISSINE Mohammed. Built for efficiency.</p>
+      </footer>
        <style>{`
         @keyframes fade-in {
             from { opacity: 0; transform: translateY(10px); }
