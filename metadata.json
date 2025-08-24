@@ -1,0 +1,5 @@
+{
+  "name": "AI CMI Statement Extractor",
+  "description": "An AI-powered application to automatically extract tabular data from uploaded CMI (Centre Monétique Interbancaire) statements and export it to Excel.",
+  "requestFramePermissions": []
+}
