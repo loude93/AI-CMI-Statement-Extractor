@@ -45,7 +45,7 @@ export default function App() {
       reader.onload = async () => {
         try {
           const base64 = (reader.result as string).split(',')[1];
-          const extracted = await extractDataFromFile(base64, file.type);
+          const extracted = await extractDataFromFile(base64, file.type, file.name);
           
           if (extracted && extracted.length > 0) {
             setData(extracted);

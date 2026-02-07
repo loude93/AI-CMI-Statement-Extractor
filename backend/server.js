@@ -61,10 +61,56 @@ const json = (res, statusCode, payload) => {
   res.end(JSON.stringify(payload));
 };
 
+const toFrenchDate = (date = new Date()) => {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+const buildDemoRows = (sourceName = 'Uploaded file') => {
+  const date = toFrenchDate();
+  const tpe = '12345';
+  return [
+    {
+      date,
+      compteGeneral: '34210000',
+      compteTier: `CMI${tpe}`,
+      libelle: `${sourceName} - DEMO - TOTAL REMISE`,
+      debit: '',
+      credit: '1000,00'
+    },
+    {
+      date,
+      compteGeneral: '61474000',
+      compteTier: '',
+      libelle: `${sourceName} - DEMO - COMMISSIONS HT`,
+      debit: '20,00',
+      credit: ''
+    },
+    {
+      date,
+      compteGeneral: '34552010',
+      compteTier: '',
+      libelle: `${sourceName} - DEMO - TVA SUR COMMISSIONS`,
+      debit: '4,00',
+      credit: ''
+    },
+    {
+      date,
+      compteGeneral: '34210000',
+      compteTier: `CMI${tpe}`,
+      libelle: `${sourceName} - DEMO - SOLDE NET REMISE`,
+      debit: '976,00',
+      credit: ''
+    }
+  ];
+};
+
 const getAiClient = () => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    throw new Error('Missing GEMINI_API_KEY. Add it to .env.local before processing documents.');
+    return null;
   }
   return new GoogleGenAI({ apiKey });
 };
@@ -79,7 +125,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'GET' && req.url === '/api/health') {
-    return json(res, 200, { ok: true });
+    return json(res, 200, { ok: true, geminiConfigured: Boolean(process.env.GEMINI_API_KEY) });
   }
 
   if (req.method === 'POST' && req.url === '/api/extract') {
@@ -90,13 +136,17 @@ const server = http.createServer(async (req, res) => {
       }
 
       const body = raw ? JSON.parse(raw) : {};
-      const { fileBase64, fileType } = body;
+      const { fileBase64, fileType, fileName } = body;
 
       if (!fileBase64 || !fileType) {
         return json(res, 400, { error: 'fileBase64 and fileType are required.' });
       }
 
       const ai = getAiClient();
+      if (!ai) {
+        return json(res, 200, buildDemoRows(fileName || 'Uploaded file'));
+      }
+
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: {

@@ -1,12 +1,12 @@
 import type { StatementRow } from '../types';
 
-export const extractDataFromFile = async (fileBase64: string, fileType: string): Promise<StatementRow[]> => {
+export const extractDataFromFile = async (fileBase64: string, fileType: string, fileName?: string): Promise<StatementRow[]> => {
   const response = await fetch('/api/extract', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ fileBase64, fileType })
+    body: JSON.stringify({ fileBase64, fileType, fileName })
   });
 
   const payload = await response.json();
