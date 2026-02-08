@@ -46,4 +46,13 @@ process.on('SIGINT', () => shutdown(0));
 process.on('SIGTERM', () => shutdown(0));
 
 children.push(run('backend', process.execPath, ['backend/server.js']));
-children.push(run('frontend', process.execPath, ['node_modules/vite/bin/vite.js', '--host', '0.0.0.0']));
+children.push(
+  run('frontend', process.execPath, [
+    'node_modules/vite/bin/vite.js',
+    '--host',
+    '0.0.0.0',
+    '--port',
+    '4173',
+    '--strictPort'
+  ])
+);
