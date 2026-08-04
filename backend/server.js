@@ -36,7 +36,7 @@ const loadDotEnvLocal = () => {
 
 loadDotEnvLocal();
 
-const PORT = Number(process.env.PORT || 8787);
+const PORT = Number(process.env.PORT || 3001);
 
 const prompt = `
 You are an expert financial data analyst tasked with converting CMI (Centre Monétique Interbancaire) statement transactions into a specific accounting journal format.
